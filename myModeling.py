@@ -133,6 +133,7 @@ train_prop=0.8 # for splitting sessions into train and test
 # Define groups to iterate over
 groups = {'asyn': asyn_behavior, 'control': control_behavior}
 results = []
+individual_mouse_results = []  # Store per-mouse parameters for between-group comparisons
 
 os.chdir(r'R:\Basic_Sciences\Phys\Lerner_Lab_tnl2633\Bita\ASAP - Jillian Paper\official analysis\JIMMY\behavior\output_datafiles\RLFR modeling')
 
@@ -201,6 +202,38 @@ for probs in prob_list:
             'nll': nll
         })
 
+        # Fit individual mouse parameters for between-group comparisons
+        print(f'Fitting individual mouse parameters for {group_name} {probs}...')
+        mice_in_group = data['mouse'].unique()
+        for mouse_id in mice_in_group:
+            mouse_data = data[data['mouse'] == mouse_id]
+            mouse_sessions = mouse_data['Session'].unique()
+            
+            if len(mouse_sessions) < 1:
+                print(f'  Skipping mouse {mouse_id}: no sessions')
+                continue
+            
+            mouse_features, _, _ = reps.pull_sample_dataset(mouse_sessions, mouse_data)
+            
+            try:
+                mouse_params, mouse_nll = fit.fit_with_scipy(fit.log_probability_rflr, mouse_features)
+                mouse_alpha, mouse_beta, mouse_tau = mouse_params
+                
+                individual_mouse_results.append({
+                    'mouse': mouse_id,
+                    'group': group_name,
+                    'condition': probs,
+                    'alpha': mouse_alpha,
+                    'beta': mouse_beta,
+                    'tau': mouse_tau,
+                    'nll': mouse_nll,
+                    'n_sessions': len(mouse_sessions)
+                })
+                print(f'  Mouse {mouse_id}: alpha={mouse_alpha:.2f}, beta={mouse_beta:.2f}, tau={mouse_tau:.2f}')
+            except Exception as e:
+                print(f'  Error fitting mouse {mouse_id}: {e}')
+                continue
+
         model_probs = models.RFLR(test_features, params)
 
         T = (1-np.exp(-1/tau))/beta 
@@ -243,3 +276,8 @@ for probs in prob_list:
 
 # Save parameters to CSV
 pd.DataFrame(results).to_csv('model_parameters.csv', index=False)
+
+# Save individual mouse parameters to CSV for between-group comparisons
+individual_mouse_df = pd.DataFrame(individual_mouse_results)
+individual_mouse_df.to_csv('individual_mouse_parameters.csv', index=False)
+print(f'\nSaved {len(individual_mouse_results)} individual mouse parameter fits to individual_mouse_parameters.csv')
