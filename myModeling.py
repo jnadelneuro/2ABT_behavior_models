@@ -209,7 +209,7 @@ for probs in prob_list:
             mouse_data = data[data['mouse'] == mouse_id]
             mouse_sessions = mouse_data['Session'].unique()
             
-            if len(mouse_sessions) < 1:
+            if len(mouse_sessions) == 0:
                 print(f'  Skipping mouse {mouse_id}: no sessions')
                 continue
             
@@ -230,7 +230,7 @@ for probs in prob_list:
                     'n_sessions': len(mouse_sessions)
                 })
                 print(f'  Mouse {mouse_id}: alpha={mouse_alpha:.2f}, beta={mouse_beta:.2f}, tau={mouse_tau:.2f}')
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 print(f'  Error fitting mouse {mouse_id}: {e}')
                 continue
 
