@@ -130,7 +130,8 @@ def encode_session(choices, rewards, memories, featfun):
     '''Helper to encode sessions in features and outcomes'''
     
     assert len(memories) == len(featfun)  
-    
+
+
     # Construct the features
     features = []
     for fn, memory in zip(featfun, memories): 
@@ -153,7 +154,13 @@ def fit_logreg_policy(sessions, memories, featfun=feature_functions):
     OUTPUTS:
         -lr (LogisticRegression): fit model
     '''
-    
+    M = max(memories)
+    for i, s in enumerate(sessions):
+        lens = [len(part) for part in s]
+        if lens[0] != lens[1] or lens[0] <= M:
+            print(f'session {i}: lens={lens}, max(memories)={M}')
+    sessions = [s for s in sessions if len(s[0]) > M and len(s[0]) == len(s[1])]
+
     encoded_sessions = [encode_session(*session, memories, featfun=featfun) for session in sessions]
     X = np.row_stack([session[0] for session in encoded_sessions])
     y = np.concatenate([session[1] for session in encoded_sessions])
